@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 	struct sigaction act;
 	act.sa_handler = int_handler;
 	sigaction(SIGINT, &act, NULL);
+	sigaction(SIGTERM, &act, NULL);
 
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
