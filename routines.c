@@ -36,12 +36,6 @@ GSSZ:;;
      send(clifd, t, sizeof(t), 0);
      goto END_ROUTINES;
 
-TERM:;;
-     printf("SERVER: CHILD: Got TERM!\n");
-     stat->term = true;
-     send(clifd, "TERM", 4, 0);
-     goto END_ROUTINES;
-
 WHAT:;;
      send(clifd, "WHAT", 4, 0);
      goto END_ROUTINES;

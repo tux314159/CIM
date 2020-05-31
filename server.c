@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <netdb.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -23,7 +24,6 @@
 struct srv_status {
 	size_t stacksz;
 	char **msgstack;
-	bool term;
 };
 
 struct sockaddr_storage cliaddr;
@@ -31,7 +31,13 @@ socklen_t clilen = sizeof(cliaddr);
 struct addrinfo hints;
 struct addrinfo *servinfo;
 int sockfd, clifd, temp;
+static volatile bool term = false;
 pid_t pid = 1;
+
+void int_handler(int _) {
+	term = true;
+	shutdown(sockfd, SHUT_RDWR);
+}
 
 int main(int argc, char **argv)
 {
@@ -40,6 +46,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	/* Trap interrupts */
+	struct sigaction act;
+	act.sa_handler = int_handler;
+	sigaction(SIGINT, &act, NULL);
+
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
@@ -47,28 +58,26 @@ int main(int argc, char **argv)
 
 	sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	printf("SERVER: created socket.\n");
-	bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen);
-	printf("SERVER: bound socket.\n");
+	if(!bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen))
+		printf("SERVER: bound socket.\n");
 
 	listen(sockfd, 5);
 
 	/* Allocate memory */
 	struct srv_status *stat = mmap(NULL, sizeof(struct srv_status), PROT, FLAGS, -1, 0);
-	stat->term = false;
 	stat->stacksz = 0;
 	stat->msgstack = mmap(NULL, sizeof(char*) * STACKMAX, PROT, FLAGS, -1, 0);
 	for (int i = 0; i < STACKMAX; i++)
 		stat->msgstack[i] = mmap(NULL, sizeof(char) * BUFMAX, PROT, FLAGS, -1, 0);
 
-	while (!stat->term) {
-		/* Check if some client sent TERM */
-		if (pid > 0 && stat->term) {
-			printf("SERVER: child got TERM, terminating!\n");
+	while (!term) {
+		printf("SERVER: waiting for connection...\n");
+		clifd = accept(sockfd, (struct sockaddr*)&cliaddr, &clilen);
+		if (term) {
+			printf("SERVER: Got SIGINT, shutting down...\n");
 			continue;
 		}
 
-		printf("SERVER: waiting for connection...\n");
-		clifd = accept(sockfd, (struct sockaddr*)&cliaddr, &clilen);
 		printf("SERVER: connection found.\n");
 		printf("SERVER: forking instance to handle new connection.\n");
 
@@ -85,34 +94,24 @@ int main(int argc, char **argv)
 			char buf[BUFMAX];
 			memset(buf, 0, sizeof(buf));
 
+#include "routines.c" /* THAT HORRIBLE HACK */
+
 			read(clifd, cmdbuf, 4);
-			if (false) {/* For alignment */
-			} else if (STREQ(cmdbuf, "SEND")) {
+			if (STREQ(cmdbuf, "SEND"))
 				goto SEND;
-
-			} else if (STREQ(cmdbuf, "GETN")) { /* GET Number */
+			else if (STREQ(cmdbuf, "GETN")) /* GET Number */
 				goto GETN;
-
-			} else if (STREQ(cmdbuf, "GETL")) { /* GET Last */
+			else if (STREQ(cmdbuf, "GETL")) /* GET Last */
 				goto GETL;
-
-			} else if (STREQ(cmdbuf, "GSSZ")) { /* Get Stack SiZe */
+			else if (STREQ(cmdbuf, "GSSZ")) /* Get Stack SiZe */
 				goto GSSZ;
-
-			} else if (STREQ(cmdbuf, "TERM")) {
-				goto TERM;
-
-			} else {
+			else
 				goto WHAT;
-			}
 
 			printf("SERVER: closing connection...\n");
 			close(clifd);
 			printf("SERVER: connection closed.\n");
 			return 0;
-
-#include "routines.c"
-
 		}
 	}
 
