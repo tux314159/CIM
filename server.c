@@ -31,6 +31,7 @@ socklen_t clilen = sizeof(cliaddr);
 struct addrinfo hints;
 struct addrinfo *servinfo;
 int sockfd, clifd, temp;
+pid_t pid = 1;
 
 int main(int argc, char **argv)
 {
@@ -53,28 +54,29 @@ int main(int argc, char **argv)
 
 	/* Allocate memory */
 	struct srv_status *stat = mmap(NULL, sizeof(struct srv_status), PROT, FLAGS, -1, 0);
-	stat->term = 0;
+	stat->term = false;
 	stat->stacksz = 0;
 	stat->msgstack = mmap(NULL, sizeof(char*) * STACKMAX, PROT, FLAGS, -1, 0);
 	for (int i = 0; i < STACKMAX; i++)
 		stat->msgstack[i] = mmap(NULL, sizeof(char) * BUFMAX, PROT, FLAGS, -1, 0);
 
 	while (!stat->term) {
+		/* Check if some client sent TERM */
+		if (pid > 0 && stat->term) {
+			printf("SERVER: child got TERM, terminating!\n");
+			continue;
+		}
+
 		printf("SERVER: waiting for connection...\n");
 		clifd = accept(sockfd, (struct sockaddr*)&cliaddr, &clilen);
 		printf("SERVER: connection found.\n");
 		printf("SERVER: forking instance to handle new connection.\n");
 
 		/* Here we go! */
-		pid_t pid = fork();
+		pid = fork();
 
 		if (pid > 0) {
 			close(clifd);
-			int status; pid_t pid = waitpid(pid, &status, WNOHANG);
-			if (WIFEXITED(status)) {
-				if (WEXITSTATUS(status) == 1)
-					stat->term = true;
-			}
 			continue;
 		}
 
@@ -84,51 +86,33 @@ int main(int argc, char **argv)
 			memset(buf, 0, sizeof(buf));
 
 			read(clifd, cmdbuf, 4);
-			if (false) {
-			}else if (STREQ(cmdbuf, "SEND")) {
-				recv(clifd, buf, BUFMAX - 1, 0);
-				strcpy(stat->msgstack[stat->stacksz++], buf);
-				send(clifd, "RECV", 4, 0);
+			if (false) {/* For alignment */
+			} else if (STREQ(cmdbuf, "SEND")) {
+				goto SEND;
 
 			} else if (STREQ(cmdbuf, "GETN")) { /* GET Number */
-				recv(clifd, buf, sizeof(buf), 0);
-				temp = atoi(buf);
-				if (temp >= stat->stacksz)
-					write(clifd, "INDO", 4); /* INDex Over */
-				else if (temp < 0)
-					write(clifd, "INDU", 4); /* INDex Under */
-				else {
-					strcat(buf, "RMSG"); /* Return MeSsaGe */
-					strcat(buf, stat->msgstack[temp]);
-					send(clifd, buf + 1, sizeof(buf) - 1, 0);
-				}
+				goto GETN;
 
 			} else if (STREQ(cmdbuf, "GETL")) { /* GET Last */
-				if (stat->stacksz == 0)
-					write(clifd, "INDO", 4);
-				else {
-					strcat(buf, "RMSG");
-					strcat(buf, stat->msgstack[stat->stacksz - 1]);
-					send(clifd, buf, sizeof(buf), 0);
-				}
+				goto GETL;
+
 			} else if (STREQ(cmdbuf, "GSSZ")) { /* Get Stack SiZe */
-				char t[4 + 4];
-				sprintf(t, "RSSZ%lu", stat->stacksz); /* Return Stack SiZe */
-				send(clifd, t, sizeof(t), 0);
+				goto GSSZ;
 
 			} else if (STREQ(cmdbuf, "TERM")) {
-				printf("SERVER: CHILD: Got TERM, terminating...\n");
-				send(clifd, "TERM", 4, 0);
-				return 0;
+				goto TERM;
 
 			} else {
-				send(clifd, "WHAT", 4, 0);
+				goto WHAT;
 			}
 
 			printf("SERVER: closing connection...\n");
 			close(clifd);
 			printf("SERVER: connection closed.\n");
 			return 0;
+
+#include "routines.c"
+
 		}
 	}
 
@@ -140,4 +124,5 @@ int main(int argc, char **argv)
 	munmap(stat->msgstack, sizeof(char*) * STACKMAX);
 	munmap(stat, sizeof(struct srv_status));
 	return 0;
+
 }
