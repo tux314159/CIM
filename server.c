@@ -53,13 +53,11 @@ int main(int argc, char **argv)
 
 	/* Allocate memory */
 	struct srv_status *stat = mmap(NULL, sizeof(struct srv_status), PROT, FLAGS, -1, 0);
-	/* stat->msgstack = mmap(NULL, sizeof(char*) * STACKMAX, PROT, FLAGS, -1, 0); */
 	stat->term = 0;
 	stat->stacksz = 0;
-	stat->msgstack = malloc(sizeof(char*) * STACKMAX);
+	stat->msgstack = mmap(NULL, sizeof(char*) * STACKMAX, PROT, FLAGS, -1, 0);
 	for (int i = 0; i < STACKMAX; i++)
-		stat->msgstack[i] = calloc(BUFMAX, sizeof(char));
-		/* stat->msgstack[i] = mmap(NULL, sizeof(char) * BUFMAX, PROT, FLAGS, -1, 0); */
+		stat->msgstack[i] = mmap(NULL, sizeof(char) * BUFMAX, PROT, FLAGS, -1, 0);
 
 	while (!stat->term) {
 		printf("SERVER: waiting for connection...\n");
@@ -138,8 +136,8 @@ int main(int argc, char **argv)
 	close(sockfd);
 	freeaddrinfo(servinfo);
 	for (int i = 0; i < STACKMAX; i++)
-		free(stat->msgstack[i]);
-	free(stat->msgstack);
+		munmap(stat->msgstack[i], sizeof(char) * BUFMAX);
+	munmap(stat->msgstack, sizeof(char*) * STACKMAX);
 	munmap(stat, sizeof(struct srv_status));
 	return 0;
 }
