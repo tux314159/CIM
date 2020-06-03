@@ -61,8 +61,12 @@ int main(int argc, char **argv)
 
 	sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	printf("SERVER: created socket.\n");
-	if(!bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen))
+	if (!bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen))
 		printf("SERVER: bound socket.\n");
+	else {
+		printf("ERROR: could not bind socket!\n");
+		return 1;
+	}
 
 	listen(sockfd, 5);
 
@@ -130,5 +134,4 @@ int main(int argc, char **argv)
 	munmap(stat->msgstack, sizeof(char*) * STACKMAX);
 	munmap(stat, sizeof(struct srv_status));
 	return 0;
-
 }
