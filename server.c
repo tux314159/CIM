@@ -91,6 +91,7 @@ int main(int argc, char **argv)
 		}
 
 		else if (pid == 0) {
+			close(sockfd);
 			char cmdbuf[5];
 			char buf[BUFMAX];
 			memset(buf, 0, sizeof(buf));
@@ -118,6 +119,7 @@ int main(int argc, char **argv)
 
 	/* Clean up */
 	close(sockfd);
+	close(clifd);
 	freeaddrinfo(servinfo);
 	for (int i = 0; i < STACKMAX; i++)
 		munmap(stat->msgstack[i], sizeof(char) * BUFMAX);
