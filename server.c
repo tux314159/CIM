@@ -95,8 +95,6 @@ int main(int argc, char **argv)
 			char buf[BUFMAX];
 			memset(buf, 0, sizeof(buf));
 
-#include "routines.c" /* THAT HORRIBLE HACK */
-
 			read(clifd, cmdbuf, 4);
 			if (STREQ(cmdbuf, "SEND"))
 				goto SEND;
@@ -108,6 +106,8 @@ int main(int argc, char **argv)
 				goto GSSZ;
 			else
 				goto WHAT;
+
+#include "routines.c" /* THAT HORRIBLE HACK */
 
 			printf("SERVER: closing connection...\n");
 			close(clifd);
