@@ -1,6 +1,6 @@
 CC=gcc
 DEBUG=-g
-CFLAGS=$(DEBUG) -o $@
+CFLAGS=$(DEBUG) -pthread -o $@
 
 all : server client
 

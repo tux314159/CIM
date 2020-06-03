@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <signal.h>
+#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -24,6 +25,7 @@
 struct srv_status {
 	size_t stacksz;
 	char **msgstack;
+	sem_t sem;
 };
 
 struct sockaddr_storage cliaddr;
@@ -70,6 +72,8 @@ int main(int argc, char **argv)
 	stat->msgstack = mmap(NULL, sizeof(char*) * STACKMAX, PROT, FLAGS, -1, 0);
 	for (int i = 0; i < STACKMAX; i++)
 		stat->msgstack[i] = mmap(NULL, sizeof(char) * BUFMAX, PROT, FLAGS, -1, 0);
+
+	sem_init(&stat->sem, true, 1);
 
 	while (!term) {
 		printf("SERVER: waiting for connection...\n");

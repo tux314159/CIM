@@ -1,4 +1,5 @@
 /* To avoid the huge if-else tree; though this isn't much better :P */
+sem_wait(&stat->sem);
 goto END_ROUTINES;
 SEND:;;
      recv(clifd, buf, BUFMAX - 1, 0);
@@ -41,3 +42,4 @@ WHAT:;;
      goto END_ROUTINES;
 
 END_ROUTINES:;;
+sem_post(&stat->sem);
