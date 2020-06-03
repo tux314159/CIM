@@ -9,3 +9,6 @@ server : server.c
 
 client : client.c
 	$(CC) $(CFLAGS) $<
+
+clean :
+	rm -f server client

@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 	sockfd = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	printf("CLIENT: connecting to server...\n");
 	if (connect(sockfd, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-		printf("ERROR: unable to establish connection.\n");
+		fprintf(stderr, "ERROR: unable to establish connection.\n");
 		exit(1);
 	}
 	printf("CLIENT: connected to server.\n");
