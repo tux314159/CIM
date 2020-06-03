@@ -16,7 +16,7 @@ char buf[256];
 int main(int argc, char **argv)
 {
 	if (argc < 3) {
-		fprintf(stderr, "ERROR: Not enough arguments!\n");
+		fprintf(stderr, "Usage: %s <address> <port>\n", argv[0]);
 		exit(1);
 	}
 
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	}
 	printf("CLIENT: connected to server.\n");
 
-	scanf("%[^\n]s", &buf);
+	scanf("%[^\n]s", buf);
 	write(sockfd, buf, strlen(buf));
 	memset(&buf, 0, sizeof(buf));
 	read(sockfd, buf, 255);

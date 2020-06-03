@@ -36,7 +36,8 @@ int sockfd, clifd, temp;
 static volatile bool term = false;
 pid_t pid = 1;
 
-void int_handler(int _) {
+void int_handler(int _)
+{
 	term = true;
 	shutdown(sockfd, SHUT_RDWR);
 }
@@ -44,7 +45,7 @@ void int_handler(int _) {
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "ERROR: Not enough arguments!\n");
+	fprintf(stderr, "Usage: %s <port>\n", argv[0]);
 		exit(1);
 	}
 
@@ -64,7 +65,7 @@ int main(int argc, char **argv)
 	if (!bind(sockfd, servinfo->ai_addr, servinfo->ai_addrlen))
 		printf("SERVER: bound socket.\n");
 	else {
-		printf("ERROR: could not bind socket!\n");
+		printf("SERVER: ERROR: could not bind socket!\n");
 		return 1;
 	}
 
@@ -118,9 +119,9 @@ int main(int argc, char **argv)
 
 #include "routines.c" /* THAT HORRIBLE HACK */
 
-			printf("SERVER: closing connection...\n");
+			printf("SERVER: CHILD: closing connection...\n");
 			close(clifd);
-			printf("SERVER: connection closed.\n");
+			printf("SERVER: CHILD: connection closed.\n");
 			return 0;
 		}
 	}
