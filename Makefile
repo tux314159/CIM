@@ -1,5 +1,5 @@
 CC=gcc
-DEBUG=-g
+DEBUG=-g -Wall
 CFLAGS=$(DEBUG) -pthread -o $@
 
 all : server client
