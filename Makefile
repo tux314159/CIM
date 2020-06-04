@@ -4,7 +4,7 @@ CFLAGS=$(DEBUG) -pthread -o $@
 
 all : server client
 
-server : server.c
+server : server.c routines.c
 	$(CC) $(CFLAGS) $<
 
 client : client.c
