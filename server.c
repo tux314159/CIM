@@ -114,6 +114,8 @@ int main(int argc, char **argv)
 				goto GETL;
 			else if (STREQ(cmdbuf, "GSSZ")) /* Get Stack SiZe */
 				goto GSSZ;
+			else if (STREQ(cmdbuf, "SKIP")) /* SKIP lol */
+				goto SKIP;
 			else
 				goto WHAT;
 
