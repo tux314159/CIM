@@ -17,7 +17,7 @@
 
 #define BUFMAX 256
 #define STACKMAX 100
-#define PROT  PROT_READ | PROT_WRITE
+#define PROT PROT_READ | PROT_WRITE
 #define FLAGS MAP_SHARED | MAP_ANONYMOUS
 
 #define STREQ(x, y) (!strcmp(x, y))
