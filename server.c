@@ -116,25 +116,73 @@ int main(int argc, char **argv)
 				goto GSSZ;
 			else if (STREQ(cmdbuf, "SKIP")) /* SKIP lol */
 				goto SKIP;
-			else
-				goto WHAT;
+            else
+                goto WHAT;
 
-#include "routines.c" /* THAT HORRIBLE HACK */
+            sem_wait(&stat->sem);
+            goto END_ROUTINES;
+SEND:
+            recv(clifd, buf, BUFMAX - 1, 0);
+            strcpy(stat->msgstack[stat->stacksz++], buf);
+            sprintf(buf, "RECV%06lu", stat->stacksz); /* Return MeSsaGe */
+            send(clifd, buf, sizeof(buf), 0);
+            goto END_ROUTINES;
 
-			printf("SERVER: CHILD: closing connection...\n");
-			close(clifd);
-			printf("SERVER: CHILD: connection closed.\n");
-			return 0;
-		}
-	}
+GETN:
+            recv(clifd, buf, sizeof(buf), 0);
+            temp = atoi(buf) - 1;
+            if (temp >= stat->stacksz)
+                send(clifd, "INDO", 4, 0); /* INDex Over */
+            else if (temp < 0)
+                send(clifd, "INDU", 4, 0); /* INDex Under */
+            else {
+                sprintf(buf, "RMSG%06lu%s", stat->stacksz, stat->msgstack[temp]); /* Return MeSsaGe */
+                send(clifd, buf + 1, sizeof(buf) - 1, 0);
+            }
+            goto END_ROUTINES;
 
-	/* Clean up */
-	close(sockfd);
-	close(clifd);
-	freeaddrinfo(servinfo);
-	for (int i = 0; i < STACKMAX; i++)
-		munmap(stat->msgstack[i], sizeof(char) * BUFMAX);
-	munmap(stat->msgstack, sizeof(char*) * STACKMAX);
-	munmap(stat, sizeof(struct srv_status));
-	return 0;
+GETL:
+            if (stat->stacksz == 0)
+                send(clifd, "INDO", 4, 0);
+            else {
+                strcat(buf, "RMSG");
+                sprintf(buf, "RMSG%06lu%s", stat->stacksz, stat->msgstack[stat->stacksz - 1]);
+                send(clifd, buf, sizeof(buf), 0);
+            }
+            goto END_ROUTINES;
+
+GSSZ:
+            (void)0;
+            char t[4 + 4];
+            sprintf(t, "RSSZ%lu", stat->stacksz); /* Return Stack SiZe */
+            send(clifd, t, sizeof(t), 0);
+            goto END_ROUTINES;
+
+SKIP:
+            send(clifd, "    ", 4, 0); /* Client is expecting 4 bytes */
+            goto END_ROUTINES;
+
+WHAT:
+            send(clifd, "WHAT", 4, 0);
+            goto END_ROUTINES;
+
+END_ROUTINES:
+            sem_post(&stat->sem);
+
+            printf("SERVER: CHILD: closing connection...\n");
+            close(clifd);
+            printf("SERVER: CHILD: connection closed.\n");
+            return 0;
+        }
+    }
+
+    /* Clean up */
+    close(sockfd);
+    close(clifd);
+    freeaddrinfo(servinfo);
+    for (int i = 0; i < STACKMAX; i++)
+        munmap(stat->msgstack[i], sizeof(char) * BUFMAX);
+    munmap(stat->msgstack, sizeof(char*) * STACKMAX);
+    munmap(stat, sizeof(struct srv_status));
+    return 0;
 }
